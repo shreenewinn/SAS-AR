@@ -1,95 +1,89 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <title>AR Experience</title>
-
-    <link rel="manifest" href="manifest.json">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="black">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebAR Poster - Artivive Style</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-      /* FORCE FULL SCREEN CSS */
-      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: black; }
-      
+      /* This CSS makes the "Start" button look professional */
+      body { margin: 0; overflow: hidden; font-family: sans-serif; }
       #start-screen {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: black; z-index: 9999;
+        background: rgba(0,0,0,0.9); z-index: 9999;
         display: flex; justify-content: center; align-items: center; flex-direction: column;
       }
       #start-btn {
-        padding: 20px 50px; font-size: 18px; font-weight: bold;
+        padding: 15px 40px; font-size: 18px; font-weight: bold;
         background: white; border: none; border-radius: 50px;
-        cursor: pointer; text-transform: uppercase; margin-bottom: 20px;
+        cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
       }
-      .hint-text { color: #888; font-family: sans-serif; font-size: 14px; text-align: center; max-width: 80%; }
-      
-      #vid { position: absolute; opacity: 0.01; pointer-events: none; }
+      .instructions { color: white; margin-top: 20px; font-size: 14px; opacity: 0.8; }
     </style>
   </head>
 
   <body>
     <div id="start-screen">
-      <button id="start-btn">ENTER AR</button>
-      <div class="hint-text" id="install-hint">
-        Tip: Add to Home Screen for Full Screen Mode
-      </div>
+      <button id="start-btn">View Poster</button>
+      <div class="instructions">Point camera at the poster</div>
     </div>
 
-    <video id="vid" src="./video.mp4" loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
-
     <a-scene 
-      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.001; filterBeta: 10;" 
+      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta: 0.001;" 
       color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
-      
+
+      <a-assets>
+        <video id="vid" src="./video.mp4" crossorigin="anonymous" playsinline webkit-playsinline loop></video>
+      </a-assets>
+
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity mindar-image-target="targetIndex: 0" id="target">
+      <a-entity mindar-image-target="targetIndex: 0">
+        
         <a-plane 
-          id="video-plane" src="#vid" position="0 0 0" height="1.402" width="1" rotation="0 0 0" visible="false">
+          id="video-plane"
+          src="#vid" 
+          position="0 0 0" 
+          height="1.402" 
+          width="1" 
+          rotation="0 0 0" 
+          opacity="0">
         </a-plane>
+
       </a-entity>
     </a-scene>
 
     <script>
-      const startBtn = document.querySelector("#start-btn");
-      const startScreen = document.querySelector("#start-screen");
-      const video = document.querySelector("#vid");
-      const plane = document.querySelector("#video-plane");
-      const target = document.querySelector("#target");
+      const startBtn = document.getElementById('start-btn');
+      const startScreen = document.getElementById('start-screen');
+      const video = document.getElementById('vid');
+      const plane = document.getElementById('video-plane');
+      const scene = document.querySelector('a-scene');
 
-      // Hide "Add to Home Screen" hint if already in full screen
-      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
-        document.getElementById("install-hint").style.display = 'none';
-      }
-
-      startBtn.addEventListener("click", () => {
-        // Request Full Screen (Android Only)
-        if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen().catch((err) => {
-            console.log("Full screen request denied or not supported");
-          });
-        }
-        video.play(); video.pause();
-        startScreen.style.display = "none";
+      // User clicks "View Poster" -> Unlocks audio/video
+      startBtn.addEventListener('click', () => {
+        startScreen.style.display = 'none'; // Hide the button
+        video.play(); // Initialize video
+        video.pause(); // Pause immediately (wait for poster)
       });
 
-      target.addEventListener("targetFound", () => {
-        plane.setAttribute("visible", true);
-        video.play(); video.muted = false;
+      // When the Poster is Found
+      scene.addEventListener("targetFound", event => {
+        console.log("Poster Found");
+        plane.setAttribute("opacity", "1"); // Make video visible
+        video.play(); // Start playing
       });
 
-      target.addEventListener("targetLost", () => {
-        video.pause();
-        plane.setAttribute("visible", false);
+      // When the Poster is Lost
+      scene.addEventListener("targetLost", event => {
+        console.log("Poster Lost");
+        video.pause(); // Stop playing
+        // Optional: Hide video so it doesn't float in space
+        plane.setAttribute("opacity", "0"); 
       });
     </script>
   </body>
