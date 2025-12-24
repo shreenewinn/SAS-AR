@@ -1,51 +1,47 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>WebAR - Full Screen</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>AR Experience</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-      /* FULL SCREEN & NO SCROLLING */
-      html, body { 
-        margin: 0; padding: 0; width: 100%; height: 100%; 
-        overflow: hidden; background: black; 
-      }
+      /* FORCE FULL SCREEN CSS */
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: black; }
       
-      /* START SCREEN OVERLAY */
       #start-screen {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: black; z-index: 9999;
-        display: flex; justify-content: center; align-items: center;
+        display: flex; justify-content: center; align-items: center; flex-direction: column;
       }
       #start-btn {
-        padding: 20px 40px; font-size: 20px; font-weight: bold;
+        padding: 20px 50px; font-size: 18px; font-weight: bold;
         background: white; border: none; border-radius: 50px;
-        cursor: pointer; text-transform: uppercase;
+        cursor: pointer; text-transform: uppercase; margin-bottom: 20px;
       }
-
-      /* HIDE VIDEO ELEMENT (But keep it active) */
-      #vid {
-        position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; z-index: -10;
-      }
+      .hint-text { color: #888; font-family: sans-serif; font-size: 14px; text-align: center; max-width: 80%; }
+      
+      #vid { position: absolute; opacity: 0.01; pointer-events: none; }
     </style>
   </head>
 
   <body>
     <div id="start-screen">
-      <button id="start-btn">TAP TO START</button>
+      <button id="start-btn">ENTER AR</button>
+      <div class="hint-text" id="install-hint">
+        Tip: Add to Home Screen for Full Screen Mode
+      </div>
     </div>
 
-    <video 
-      id="vid" 
-      src="./video.mp4" 
-      loop 
-      muted 
-      playsinline 
-      webkit-playsinline 
-      crossorigin="anonymous">
-    </video>
+    <video id="vid" src="./video.mp4" loop muted playsinline webkit-playsinline crossorigin="anonymous"></video>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.001; filterBeta: 10;" 
@@ -53,21 +49,13 @@
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
-
+      
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0" id="target">
-        
         <a-plane 
-          id="video-plane"
-          src="#vid" 
-          position="0 0 0" 
-          height="1.402" 
-          width="1" 
-          rotation="0 0 0" 
-          visible="false">
+          id="video-plane" src="#vid" position="0 0 0" height="1.402" width="1" rotation="0 0 0" visible="false">
         </a-plane>
-
       </a-entity>
     </a-scene>
 
@@ -78,21 +66,27 @@
       const plane = document.querySelector("#video-plane");
       const target = document.querySelector("#target");
 
-      // 1. UNLOCK VIDEO & HIDE OVERLAY
+      // Hide "Add to Home Screen" hint if already in full screen
+      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+        document.getElementById("install-hint").style.display = 'none';
+      }
+
       startBtn.addEventListener("click", () => {
-        video.play();
-        video.pause();
-        startScreen.style.display = "none"; // Goes full screen immediately
+        // Request Full Screen (Android Only)
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch((err) => {
+            console.log("Full screen request denied or not supported");
+          });
+        }
+        video.play(); video.pause();
+        startScreen.style.display = "none";
       });
 
-      // 2. SHOW VIDEO WHEN FOUND
       target.addEventListener("targetFound", () => {
         plane.setAttribute("visible", true);
-        video.play();
-        video.muted = false;
+        video.play(); video.muted = false;
       });
 
-      // 3. HIDE VIDEO WHEN LOST
       target.addEventListener("targetLost", () => {
         video.pause();
         plane.setAttribute("visible", false);
