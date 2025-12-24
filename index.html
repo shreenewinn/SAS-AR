@@ -1,48 +1,50 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SAS WebAR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>AR Experience</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-      /* 1. NUCLEAR CSS: Hides anything related to VR */
-      .a-enter-vr, .a-enter-vr-button, .a-enter-ar {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        width: 0 !important;
-        height: 0 !important;
-        pointer-events: none !important;
-        z-index: -9999 !important;
+      /* 2. NUCLEAR VR BUTTON HIDER (Force Hide) */
+      .a-enter-vr, .a-enter-vr-button, .a-enter-ar { 
+        display: none !important; 
+        width: 0 !important; height: 0 !important; 
+        opacity: 0 !important; pointer-events: none !important; 
       }
 
-      body { margin: 0; overflow: hidden; font-family: sans-serif; background: black; }
-      
+      /* 3. FULL SCREEN SETUP */
+      html, body { 
+        margin: 0; padding: 0; width: 100%; height: 100%; 
+        overflow: hidden; background: black; 
+      }
+
+      /* START SCREEN */
       #start-screen {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.9); z-index: 9999;
-        display: flex; justify-content: center; align-items: center; flex-direction: column;
+        background: black; z-index: 9999;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
       }
       
       #start-btn {
-        padding: 15px 40px; font-size: 18px; font-weight: bold;
+        padding: 18px 40px; font-size: 18px; font-weight: bold;
         background: white; border: none; border-radius: 50px;
-        cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+        cursor: pointer; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;
       }
-      
-      .instructions { color: white; margin-top: 20px; font-size: 14px; opacity: 0.8; }
 
-      #vid { position: absolute; opacity: 0.01; pointer-events: none; }
+      .instructions { color: #888; font-family: sans-serif; font-size: 14px; text-transform: uppercase; }
+
+      /* VIDEO HACK (Keep it active but invisible) */
+      #vid { position: absolute; top: 0; left: 0; opacity: 0.01; pointer-events: none; z-index: -10; }
     </style>
   </head>
 
   <body>
-    
+
     <div id="start-screen">
-      <button id="start-btn">BRING ART TO LIFE</button>
-      <div class="instructions">Focus on the Artwork</div>
+      <button id="start-btn">START AR</button>
+      <div class="instructions">Point camera at the poster</div>
     </div>
 
     <video 
@@ -65,6 +67,7 @@
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0" id="target">
+        
         <a-plane 
           id="video-plane"
           src="#vid" 
@@ -74,6 +77,7 @@
           rotation="0 0 0" 
           opacity="0">
         </a-plane>
+
       </a-entity>
     </a-scene>
 
@@ -82,38 +86,33 @@
       const startScreen = document.getElementById('start-screen');
       const video = document.getElementById('vid');
       const plane = document.getElementById('video-plane');
-      const scene = document.querySelector('a-scene');
       const target = document.getElementById('target');
 
-      // 1. DELETE VR BUTTON (The Javascript Fix)
-      // This waits for the scene to load, finds the button, and removes it.
-      scene.addEventListener('loaded', () => {
-        const vrButton = document.querySelector('.a-enter-vr');
-        if (vrButton) {
-          vrButton.parentNode.removeChild(vrButton);
-          console.log("VR Button Deleted");
-        }
-      });
-
-      // 2. Start Logic
+      // 1. UNLOCK IPHONE VIDEO
       startBtn.addEventListener('click', () => {
+        // Hide UI immediately
         startScreen.style.display = 'none';
+        
+        // Force video to wake up
         video.play();
         video.pause();
       });
 
-      // 3. Tracking Logic
-      target.addEventListener("targetFound", event => {
+      // 2. TARGET FOUND
+      target.addEventListener("targetFound", () => {
+        console.log("Found");
         plane.setAttribute("opacity", "1");
         video.play();
         video.muted = false;
       });
 
-      target.addEventListener("targetLost", event => {
+      // 3. TARGET LOST
+      target.addEventListener("targetLost", () => {
+        console.log("Lost");
         video.pause();
+        // Optional: Hide video again
+        // plane.setAttribute("opacity", "0");
       });
     </script>
   </body>
 </html>
-
-
