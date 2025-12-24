@@ -2,17 +2,17 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>iPhone AR Fix</title>
+    <title>iPhone Black Screen Fix</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-      /* NUCLEAR VR HIDER */
+      /* 1. NUCLEAR VR HIDER */
       .a-enter-vr, .a-enter-vr-button, .a-enter-ar { display: none !important; }
 
-      body { margin: 0; overflow: hidden; font-family: sans-serif; background: black; }
+      /* 2. SYSTEM STYLES */
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: black; }
       
-      /* FULL SCREEN UI */
       #start-screen {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: black; z-index: 9999;
@@ -20,26 +20,45 @@
       }
       
       #start-btn {
-        padding: 20px 50px; font-size: 20px; font-weight: bold;
-        background: #007AFF; color: white; border: none; border-radius: 50px;
-        cursor: pointer; text-transform: uppercase; margin-bottom: 20px;
+        padding: 20px 40px; font-size: 18px; font-weight: bold;
+        background: white; border: none; border-radius: 50px;
+        cursor: pointer; margin-bottom: 20px;
       }
 
-      #status-log {
-        color: yellow; font-family: monospace; font-size: 12px; 
-        text-align: center; margin-top: 10px; background: rgba(0,0,0,0.5); padding: 5px;
-      }
+      .status-text { color: #888; font-family: sans-serif; font-size: 12px; }
 
-      /* VIDEO (Invisible but Active) */
-      #vid { position: absolute; top: 0; left: 0; opacity: 0.01; z-index: -10; pointer-events: none; }
+      /* 3. THE TRICK: Video is technically "Visible" but invisible */
+      /* Do NOT use display:none */
+      #vid {
+        position: fixed; top: 0; left: 0; 
+        width: 1px; height: 1px; 
+        opacity: 0.01; pointer-events: none; z-index: -1;
+      }
     </style>
+
+    <script>
+      AFRAME.registerComponent('fix-ios-video', {
+        init: function() {
+          this.video = document.querySelector("#vid");
+        },
+        tick: function() {
+          if (this.video.readyState === 4) {
+            const mesh = this.el.getObject3D('mesh');
+            if (mesh && mesh.material.map) {
+              // FORCE UPDATE: Tells the 3D engine to repaint the video every frame
+              mesh.material.map.needsUpdate = true;
+            }
+          }
+        }
+      });
+    </script>
   </head>
 
   <body>
 
     <div id="start-screen">
       <button id="start-btn">START CAMERA</button>
-      <div id="status-log">Status: Waiting for user...</div>
+      <div class="status-text" id="log">Ready for iPhone</div>
     </div>
 
     <video 
@@ -65,6 +84,7 @@
         
         <a-plane 
           id="video-plane"
+          fix-ios-video
           src="#vid" 
           position="0 0 0" 
           height="1.402" 
@@ -79,43 +99,31 @@
     <script>
       const startBtn = document.getElementById('start-btn');
       const startScreen = document.getElementById('start-screen');
-      const statusLog = document.getElementById('status-log');
+      const log = document.getElementById('log');
       const video = document.getElementById('vid');
       const plane = document.getElementById('video-plane');
       const target = document.getElementById('target');
 
-      // 1. IPHONE UNLOCK SEQUENCE
+      // IPHONE UNLOCK SEQUENCE
       startBtn.addEventListener('click', () => {
-        statusLog.innerText = "Status: Unlocking Video...";
+        log.innerText = "Initializing...";
         
-        // Force Play then Pause immediately (This satisfies Safari security)
+        // 1. Play video immediately to get permissions
         video.play().then(() => {
-          video.pause();
-          statusLog.innerText = "Status: Camera Active. Scan Poster.";
-          startScreen.style.display = 'none';
-        }).catch((error) => {
-          statusLog.innerText = "Error: " + error.message;
+            video.pause();
+            startScreen.style.display = 'none'; // Hide UI only after success
+        }).catch(e => {
+            log.innerText = "Tap again. Error: " + e;
         });
       });
 
-      // 2. TARGET FOUND
       target.addEventListener("targetFound", () => {
-        statusLog.innerText = "Status: Target Found! Playing...";
         plane.setAttribute("visible", true);
-        
-        // Play Muted First (Safari loves this)
-        video.muted = true;
+        video.muted = false;
         video.play();
-
-        // Try to unmute after 500ms
-        setTimeout(() => {
-          video.muted = false;
-        }, 500);
       });
 
-      // 3. TARGET LOST
       target.addEventListener("targetLost", () => {
-        statusLog.innerText = "Status: Target Lost - Paused";
         video.pause();
         plane.setAttribute("visible", false);
       });
